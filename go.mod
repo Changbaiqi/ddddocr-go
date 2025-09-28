@@ -1,4 +1,4 @@
-module ddddocr-go
+module github.com/Changbaiqi/ddddocr-go
 
 go 1.23
 

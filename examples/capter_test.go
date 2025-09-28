@@ -1,8 +1,8 @@
 package examples
 
 import (
-	"ddddocr-go/utils"
 	"fmt"
+	"github.com/Changbaiqi/ddddocr-go/utils"
 	"testing"
 
 	ort "github.com/yalue/onnxruntime_go"
