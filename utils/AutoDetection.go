@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"image"
+	"image/color"
 	"log"
 	"math"
 	"sort"
@@ -35,6 +36,50 @@ func imageToCHWFloat32(img image.Image, targetW, targetH int) []float32 {
 			idx++
 		}
 	}
+	return data
+}
+
+// imageToCHWFloat32Letterbox 把 image.Image 转为 YOLOv12 输入张量
+// 输入: targetW, targetH 为模型输入大小（比如 640x640）
+// 输出: []float32, [C,H,W] 布局
+func ImageToCHWFloat32Letterbox(img image.Image, targetW, targetH int) []float32 {
+	// 原图尺寸
+	origW := img.Bounds().Dx()
+	origH := img.Bounds().Dy()
+
+	// 计算缩放比例
+	scale := math.Min(float64(targetW)/float64(origW), float64(targetH)/float64(origH))
+	newW := int(float64(origW) * scale)
+	newH := int(float64(origH) * scale)
+
+	// 缩放
+	resized := imaging.Resize(img, newW, newH, imaging.Linear)
+
+	// 创建目标图（填充黑色）
+	dst := imaging.New(targetW, targetH, color.NRGBA{0, 0, 0, 255})
+	dx := (targetW - newW) / 2
+	dy := (targetH - newH) / 2
+	dst = imaging.Paste(dst, resized, image.Pt(dx, dy))
+
+	// CHW 数据
+	data := make([]float32, 3*targetH*targetW)
+	idx := 0
+	for y := 0; y < targetH; y++ {
+		for x := 0; x < targetW; x++ {
+			r, g, b, _ := dst.At(x, y).RGBA()
+			rf := float32(r>>8) / 255.0
+			gf := float32(g>>8) / 255.0
+			bf := float32(b>>8) / 255.0
+
+			// BGR 顺序
+			data[0*targetH*targetW+idx] = rf
+			data[1*targetH*targetW+idx] = gf
+			data[2*targetH*targetW+idx] = bf
+
+			idx++
+		}
+	}
+
 	return data
 }
 
@@ -133,7 +178,7 @@ func AutoDetection(img image.Image, onnxPath string) (string, error) {
 	imgW := img.Bounds().Dx()
 	imgH := img.Bounds().Dy()
 
-	detections := ParseDetections(data, imgW, imgH, 0.1, 0.45)
+	detections := ParseDetections(data, imgW, imgH, 0.3)
 	fmt.Println(detections)
 	// 5. 打印前 20 个框
 	numDet := len(data) / 6
@@ -146,28 +191,15 @@ func AutoDetection(img image.Image, onnxPath string) (string, error) {
 	// 6. 绘制到图片
 	dc := gg.NewContext(imgW, imgH)
 	dc.DrawImage(img, 0, 0)
-	for i := 0; i < numDet && i < 50; i++ { // 画前50个
-		conf := data[i*6+4]
-		if conf < 0.3 { // 忽略低置信度
-			continue
-		}
-		classID := int(data[i*6+5])
-
-		// 假设输出是 x1,y1,x2,y2，如果是 cx,cy,w,h 则要转换
-		x1 := data[i*6+0] * float32(imgW) / 416.0
-		y1 := data[i*6+1] * float32(imgH) / 416.0
-		x2 := data[i*6+2] * float32(imgW) / 416.0
-		y2 := data[i*6+3] * float32(imgH) / 416.0
-
+	for i := 0; i < 10; i++ {
 		dc.SetLineWidth(2)
 		dc.SetRGBA(1, 0, 0, 0.7)
-		dc.DrawRectangle(float64(x1), float64(y1), float64(x2-x1), float64(y2-y1))
+		dc.DrawRectangle(float64(detections[i].BBox.Dx()), float64(detections[i].BBox.Dy()), float64(detections[i].BBox.Max.X-detections[i].BBox.Min.X), float64(detections[i].BBox.Max.Y-detections[i].BBox.Min.Y))
 		dc.Stroke()
 
 		dc.SetRGB(1, 1, 0)
-		dc.DrawStringAnchored(fmt.Sprintf("C%d %.2f", classID, conf), float64(x1), float64(y1)-5, 0, 1)
+		//dc.DrawStringAnchored(fmt.Sprintf("C%d %.2f", classID, conf), float64(x1), float64(y1)-5, 0, 1)
 	}
-
 	// 保存图片
 	err = dc.SavePNG("./assets/output.png")
 	if err != nil {
@@ -248,7 +280,7 @@ func NMS(dets []Detection, iouThresh float32) []Detection {
 }
 
 // 解析 output tensor
-func ParseDetections(output []float32, imgW, imgH int, confThresh, nmsThresh float32) []Detection {
+func ParseDetections(output []float32, imgW, imgH int, nmsThresh float32) []Detection {
 	numDet := len(output) / 6
 	var dets []Detection
 	for i := 0; i < numDet; i++ {
@@ -256,26 +288,15 @@ func ParseDetections(output []float32, imgW, imgH int, confThresh, nmsThresh flo
 		cy := output[i*6+1]
 		w := output[i*6+2]
 		h := output[i*6+3]
-		conf := output[i*6+4]
+
 		classScore := output[i*6+5]
 		classID := int(classScore) // 如果类ID直接存储在 class_score，可以换成单独字段
-
-		score := conf * classScore
-		//if score < confThresh {
-		//	continue
-		//}
 
 		// cx,cy,w,h -> x1,y1,x2,y2
 		x1 := (cx - w/2) * 416.0
 		y1 := (cy - h/2) * 416.0
 		x2 := (cx + w/2) * 416.0
 		y2 := (cy + h/2) * 416.0
-
-		// 映射回原图尺寸
-		x1 = x1 * float32(imgW) / 416.0
-		y1 = y1 * float32(imgH) / 416.0
-		x2 = x2 * float32(imgW) / 416.0
-		y2 = y2 * float32(imgH) / 416.0
 
 		bbox := image.Rect(
 			int(math.Max(0, float64(x1))),
@@ -286,10 +307,9 @@ func ParseDetections(output []float32, imgW, imgH int, confThresh, nmsThresh flo
 
 		dets = append(dets, Detection{
 			BBox:  bbox,
-			Score: score,
+			Score: classScore,
 			Class: classID,
 		})
 	}
-
 	return NMS(dets, nmsThresh)
 }
