@@ -29,7 +29,7 @@ func AutoVerification(img image.Image, outputShape ort.Shape) string {
 	outputTensor, err := ort.NewEmptyTensor[int64](outputShape)
 	defer outputTensor.Destroy()
 
-	session, err := ort.NewAdvancedSession("./assets/common_old1.onnx",
+	session, err := ort.NewAdvancedSession("./assets/common_old.onnx",
 		[]string{"input1"}, []string{"output"},
 		[]ort.Value{inputTensor}, []ort.Value{outputTensor}, nil)
 	defer session.Destroy()

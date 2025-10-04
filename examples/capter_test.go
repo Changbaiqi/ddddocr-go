@@ -2,13 +2,14 @@ package examples
 
 import (
 	"fmt"
-	"github.com/Changbaiqi/ddddocr-go/utils"
 	"testing"
 
+	"github.com/Changbaiqi/ddddocr-go/utils"
 	ort "github.com/yalue/onnxruntime_go"
 )
 
-func TestCapter(t *testing.T) {
+// 测试验证码识别
+func TestOCR(t *testing.T) {
 	utils.DDDDOcrCoreInit()
 
 	img, err := utils.ReadImg("./code4ACcE9bF5D4.png")
@@ -18,9 +19,11 @@ func TestCapter(t *testing.T) {
 	verification := utils.AutoVerification(img, ort.NewShape(1, 18))
 	fmt.Println("verification:", verification)
 }
-func TestCapter1(t *testing.T) {
+
+// 目标识别测试
+func TestObjectIdentification(t *testing.T) {
 	utils.DDDDOcrCoreInit()
-	err2 := utils.InspectModel("./assets/common_det.onnx")
+	err2 := utils.InspectModel("./assets/common_tencent.onnx")
 	if err2 != nil {
 		t.Error(err2)
 	}
@@ -29,7 +32,7 @@ func TestCapter1(t *testing.T) {
 		panic(err)
 	}
 	//detection := utils.AutoDetection(img, ort.NewShape(1, 18))
-	detection, err2 := utils.AutoDetection(img, "./assets/common_det.onnx")
+	detection, err2 := utils.AutoDetection(img, "./assets/common_tencent.onnx")
 	if err2 != nil {
 		t.Error(err2)
 	}
