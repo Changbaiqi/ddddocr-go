@@ -9,7 +9,7 @@
 
 ## ⚒️如何导入最新版本？
 ```shell
-go get github.com/Changbaiqi/ddddocr-go@v0.0.2
+go get github.com/Changbaiqi/ddddocr-go@latest
 ````
 
 ## 🚀 简单使用教程
