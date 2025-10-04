@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/Changbaiqi/ddddocr-go/utils"
-	ort "github.com/yalue/onnxruntime_go"
 )
 
 // 测试验证码识别
@@ -16,7 +15,8 @@ func TestOCR(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	verification := utils.AutoVerification(img, ort.NewShape(1, 18))
+	//verification := utils.AutoDDDDOCRVerification(img, ort.NewShape(1, 18))
+	verification := utils.AutoOCRVerification(img)
 	fmt.Println("verification:", verification)
 }
 

@@ -57,10 +57,16 @@ func ImageToCHWFloat32Letterbox(img image.Image, targetW, targetH int) []float32
 
 	// 创建目标图（填充黑色）
 	dst := imaging.New(targetW, targetH, color.NRGBA{0, 0, 0, 255})
-	dx := (targetW - newW) / 2
-	dy := (targetH - newH) / 2
-	dst = imaging.Paste(dst, resized, image.Pt(dx, dy))
+	//dx := (targetW - newW) / 2
+	//dy := (targetH - newH) / 2
+	//dst = imaging.Paste(dst, resized, image.Pt(dx, dy))
+	dst = imaging.Paste(dst, resized, image.Pt(0, 0))
 
+	//err = dc.SavePNG("./assets/output.png")
+	//err := gg.SavePNG("./assets/resizeImg.png", dst)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
 	// CHW 数据
 	data := make([]float32, 3*targetH*targetW)
 	idx := 0

@@ -3,10 +3,8 @@ package utils
 import (
 	"fmt"
 	"image"
-	"log"
 	"math"
 
-	"github.com/fogleman/gg"
 	ort "github.com/yalue/onnxruntime_go"
 )
 
@@ -35,8 +33,7 @@ var chars = []string{
 
 // 腾讯点选
 func AutoDetectionForTencent(img image.Image, onnxPath string, resultNum int /*返回前多少个检测目标*/) ([]Detection, error) {
-	imgW := img.Bounds().Dx()
-	imgH := img.Bounds().Dy()
+
 	// 初始化环境（如果未初始化）
 	if !ort.IsInitialized() {
 		if err := ort.InitializeEnvironment(); err != nil {
@@ -48,6 +45,7 @@ func AutoDetectionForTencent(img image.Image, onnxPath string, resultNum int /*�
 	// 1) 预处理：640x640 RGB CHW float32
 	inputW, inputH := 640, 640
 	inputData := ImageToCHWFloat32Letterbox(img, inputW, inputH)
+
 	inputShape := ort.NewShape(1, 3, int64(inputH), int64(inputW))
 	inputTensor, err := ort.NewTensor[float32](inputShape, inputData)
 	if err != nil {
@@ -93,14 +91,12 @@ func AutoDetectionForTencent(img image.Image, onnxPath string, resultNum int /*�
 	// 5) 读取输出并简单返回一些调试信息
 	output := outputTensor.GetData() // []float32
 	shape := outputTensor.GetShape() // ort.Shape
-	//numAttrs := int(shape[1])        // 208
-	numDetections := int(shape[2]) // 8400
-	//for i := 0; i < len(output)/numDetections; i++ {
-	//	fmt.Printf("i=%d, x=%.3f, y=%.3f, w=%.3f, h=%.3f, score=%.3f, class=%d word=%s\n",
-	//		i, output[i*numDetections], output[i*numDetections+1],
-	//		output[i*numDetections+2], output[i*numDetections+3], output[i*numDetections+4], int(output[i*numDetections+5]), chars[int(output[i*numDetections+5])])
-	//}
+	numDetections := int(shape[2])
+
 	detections := []Detection{}
+
+	imgW := img.Bounds().Dx()
+	imgH := img.Bounds().Dy()
 
 	for i := 0; i < resultNum; i++ {
 		x := output[i*numDetections]
@@ -110,17 +106,19 @@ func AutoDetectionForTencent(img image.Image, onnxPath string, resultNum int /*�
 		score := output[i*numDetections+4]
 		class := int(output[i*numDetections+5])
 
-		// xywh -> xyxy
-		x1 := x - w/2
-		y1 := y - h/2
-		x2 := x + w/2
-		y2 := y + h/2
+		scale := float64(max(imgW, imgH)) / 640.0
+		w1 := (float64(w) - float64(x)) * scale
+		h1 := (float64(h) - float64(y)) * scale
+		x1 := (float64(x)) * scale
+		y1 := (float64(y)) * scale
+		x2 := x1 + w1
+		y2 := y1 + h1
 
 		bbox := image.Rect(
-			int(math.Max(0, float64(x1))),
-			int(math.Max(0, float64(y1))),
-			int(math.Min(float64(imgW), float64(x2))),
-			int(math.Min(float64(imgH), float64(y2))),
+			int(math.Max(0, x1)),
+			int(math.Max(0, y1)),
+			int(math.Min(float64(imgW), x2)),
+			int(math.Min(float64(640), y2)),
 		)
 		detections = append(detections, Detection{
 			BBox:  bbox,
@@ -128,32 +126,6 @@ func AutoDetectionForTencent(img image.Image, onnxPath string, resultNum int /*�
 			Class: class,
 		})
 
-	}
-	// 取前3个
-	topN := 3
-	if len(detections) < topN {
-		topN = len(detections)
-	}
-	// 6. 绘制到图片
-	dc := gg.NewContext(imgW, imgH)
-	dc.DrawImage(img, 0, 0)
-	for i := 0; i < resultNum; i++ {
-		dc.SetLineWidth(2)
-		dc.SetRGBA(1, 0, 0, 0.7)
-		x1 := float64(detections[i].BBox.Min.X)
-		x2 := float64(detections[i].BBox.Max.X)
-		y1 := float64(detections[i].BBox.Min.Y)
-		y2 := float64(detections[i].BBox.Max.Y)
-
-		dc.DrawRectangle(float64(x1), float64(y1), float64(x2-x1), float64(y2-y1))
-		dc.Stroke()
-
-		dc.SetRGB(1, 1, 0)
-	}
-	// 保存图片
-	err = dc.SavePNG("./assets/output.png")
-	if err != nil {
-		log.Fatal(err)
 	}
 	return detections, nil
 }
