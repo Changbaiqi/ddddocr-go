@@ -35,6 +35,12 @@ func main(){
 }
 ```
 
+## 🚀 关于针对腾讯的点选验证码识别声明
+针对腾讯文字点选的验证码训练没有采用任何腾讯的验证码图片，都是由相关代码自动生成模拟训练。若对贵公司带来一定影响可联系作者进行删除相关代码。
+训练代码库：[用于腾讯文字点选验证码目标识别的实现(正确率高达90%以上)](https://github.com/Changbaiqi/tencentVerDetection)
+
+
 ## ⚒️ 可能出现的问题
 如果报错`Platform-specific initialization failed`，可以参考以下文档：
 [Platform-specific initialization failed](https://yatori-dev.github.io/yatori-docs/yatori-go-console/docs.html#%E2%9D%93-%E5%85%B3%E4%BA%8E%E6%8A%A5%E9%94%99platform-specific-initialization-failed%E8%A7%A3%E5%86%B3)
+
