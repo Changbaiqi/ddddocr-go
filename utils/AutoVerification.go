@@ -14,7 +14,7 @@ import (
 import "fmt"
 
 // 半自动验证码识别（要自己传入outputShape值）
-func SemiOCRVerificationFor(img image.Image, outputShape ort.Shape) string {
+func SemiOCRVerification(img image.Image, outputShape ort.Shape) string {
 	img1 := ResizeImage(img, uint(64*img.Bounds().Dx()/img.Bounds().Dy()), 64)
 	imgGray := ConvertToGray(img1)
 
