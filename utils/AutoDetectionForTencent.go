@@ -32,7 +32,7 @@ var chars = []string{
 }
 
 // 腾讯点选
-func AutoDetectionForTencent(img image.Image, onnxPath string, resultNum int /*返回前多少个检测目标*/) ([]Detection, error) {
+func AutoDetectionForTencent(img image.Image, resultNum int /*返回前多少个检测目标*/) ([]Detection, error) {
 
 	// 初始化环境（如果未初始化）
 	if !ort.IsInitialized() {
@@ -54,7 +54,7 @@ func AutoDetectionForTencent(img image.Image, onnxPath string, resultNum int /*�
 	defer inputTensor.Destroy()
 
 	// 2) 读取模型 input/output 名和 shape
-	inputsInfo, outputsInfo, err := ort.GetInputOutputInfo(onnxPath)
+	inputsInfo, outputsInfo, err := ort.GetInputOutputInfo("./assets/common_tencent.onnx")
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func AutoDetectionForTencent(img image.Image, onnxPath string, resultNum int /*�
 	defer outputTensor.Destroy()
 
 	// 4) 创建 session 并运行
-	session, err := ort.NewAdvancedSession(onnxPath,
+	session, err := ort.NewAdvancedSession("./assets/common_tencent.onnx",
 		[]string{inputName}, []string{outputName},
 		[]ort.Value{inputTensor}, []ort.Value{outputTensor}, nil)
 	if err != nil {

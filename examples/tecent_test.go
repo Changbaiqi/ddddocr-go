@@ -22,7 +22,7 @@ func TestTencent(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	detections, err2 := utils.AutoDetectionForTencent(img, "./assets/common_tencent.onnx", 3)
+	detections, err2 := utils.AutoDetectionForTencent(img, 3)
 	if err2 != nil {
 		t.Error(err2)
 	}
