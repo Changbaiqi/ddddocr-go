@@ -12,10 +12,13 @@ import (
 
 // 首次调用必须要先进行初始化
 //
-//go:embed assets/onnxruntime.dll
-//go:embed assets/onnxruntime_arm64.so
-//go:embed assets/onnxruntime_arm64.dylib
-//go:embed assets/onnxruntime.so
+//go:embed assets/onnxruntime_win_x64_1.22.0.dll
+//go:embed assets/onnxruntime_win_arm64_1.22.0.dll
+//go:embed assets/onnxruntime_osx_x86_64_1.22.0.dylib
+//go:embed assets/onnxruntime_osx_arm64_1.22.0.dylib
+//go:embed assets/onnxruntime_linux_x64.so.1.22.0
+//go:embed assets/onnxruntime_linux_aarch64.so.1.22.0
+//go:embed assets/onnxruntime_win_x86_1.22.0.dll
 //go:embed assets/common_old.onnx
 //go:embed assets/common_tencent.onnx
 var assets embed.FS
@@ -69,21 +72,32 @@ func loadAiEnvironment() {
 
 // 根据不同系统加载不同的运行库
 func getSharedLibPath() string {
-	if runtime.GOOS == "windows" {
-		if runtime.GOARCH == "amd64" {
-			return "onnxruntime.dll"
+	switch runtime.GOOS {
+	case "windows":
+		switch runtime.GOARCH {
+		case "amd64":
+			return "onnxruntime_win_x64_1.22.0.dll"
+		case "386":
+			return "onnxruntime_win_x86_1.22.0.dll"
+		case "arm64":
+			return "onnxruntime_win_x64_1.22.0.dll"
 		}
-	}
-	if runtime.GOOS == "darwin" {
-		if runtime.GOARCH == "arm64" {
-			return "onnxruntime_arm64.dylib"
+	case "darwin":
+		switch runtime.GOARCH {
+		case "amd64":
+			// Intel 芯片的 macOS
+			return "onnxruntime_osx_x86_64_1.22.0.dylib"
+		case "arm64":
+			// Apple Silicon (M1/M2/M3)
+			return "onnxruntime_osx_arm64_1.22.0.dylib"
 		}
-	}
-	if runtime.GOOS == "linux" {
-		if runtime.GOARCH == "arm64" {
-			return "onnxruntime_arm64.so"
+	case "linux":
+		switch runtime.GOARCH {
+		case "amd64":
+			return "onnxruntime_linux_x64.so.1.22.0"
+		case "arm64":
+			return "onnxruntime_linux_aarch64.so.1.22.0"
 		}
-		return "onnxruntime.so"
 	}
 	panic("Unable to find a version of the onnxruntime library supporting this system.")
 }

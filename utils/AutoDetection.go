@@ -244,9 +244,10 @@ func InspectModel(onnxPath string) error {
 
 // Detection 结构
 type Detection struct {
-	BBox  image.Rectangle // 框 (左上,右下)
-	Score float32         // 最终置信度 = conf * class_score
-	Class int             // 类别ID
+	BBox     image.Rectangle // 框 (左上,右下)
+	Score    float32         // 最终置信度 = conf * class_score
+	Class    int             // 类别ID
+	Describe string          //描述内容
 }
 
 // IoU计算

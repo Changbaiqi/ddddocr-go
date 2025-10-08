@@ -34,11 +34,14 @@ func ReadImg(imgFile string) (image.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	img, err := png.Decode(f)
+	defer f.Close()
+
+	// 自动识别格式
+	img, _, err := image.Decode(f)
 	if err != nil {
 		return nil, err
 	}
-	f.Close()
+
 	return img, nil
 }
 
