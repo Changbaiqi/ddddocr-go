@@ -1,2 +1,4 @@
 # Default ignored files
 ./.idea
+/examples/assets/*
+/.idea/vcs.xml
