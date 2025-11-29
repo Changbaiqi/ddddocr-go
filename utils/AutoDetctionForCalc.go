@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"math"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 )
 
 // 腾讯点选专用
-var calcChars = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "x", "=", "?"}
+var calcChars = []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "-", "x", "*", "?", "/", "=", "÷"}
 
 // 腾讯点选
 func AutoDetectionForCalc(img image.Image, resultNum int /*返回前多少个检测目标*/) ([]Detection, error) {
@@ -116,9 +117,14 @@ func AutoDetectionForCalc(img image.Image, resultNum int /*返回前多少个检
 
 // 根据识别内容自动计算结果
 func AutoCalc(detections []Detection) (int, error) {
+	sort.Slice(detections, func(i, j int) bool {
+		if detections[i].BBox.Min.X < detections[j].BBox.Min.X {
+			return true
+		}
+		return false
+	})
 	detStr := ""
-	for i, det := range detections {
-		fmt.Printf("[%d] x1=%d x2=%d y1=%d y2=%d score=%f classId=%d classTag=%s \n", i, det.BBox.Min.X, det.BBox.Max.X, det.BBox.Min.Y, det.BBox.Max.Y, det.Score, det.Class, det.Describe)
+	for _, det := range detections {
 		detStr += det.Describe
 	}
 	if strings.Contains(detStr, "+") {

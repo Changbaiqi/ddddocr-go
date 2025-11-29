@@ -3,7 +3,6 @@ package examples
 import (
 	"fmt"
 	"log"
-	"sort"
 	"testing"
 
 	"github.com/Changbaiqi/ddddocr-go/utils"
@@ -17,23 +16,19 @@ func TestCalcDet(t *testing.T) {
 		t.Error(err2)
 	}
 
-	img, err := utils.ReadImg("E:\\Yatori-Dev\\yatori-go-core\\examples\\qsxt_code\\qsxt_code_13.png")
+	img, err := utils.ReadImg("E:\\Yatori-Dev\\yatori-go-core\\examples\\qsxt_code\\qsxt_code_16.png")
 
 	if err != nil {
 		panic(err)
 	}
-	detections, err2 := utils.AutoDetectionForCalc(img, 7)
+	detections, err2 := utils.AutoDetectionForCalc(img, 10)
 	if err2 != nil {
 		t.Error(err2)
 	}
 	fmt.Println("detection:", detections)
-	sort.Slice(detections, func(i, j int) bool {
-		if detections[i].BBox.Min.X < detections[j].BBox.Min.X {
-			return true
-		}
-		return false
-	})
-
+	for i, det := range detections {
+		fmt.Printf("[%d] x1=%d x2=%d y1=%d y2=%d score=%f classId=%d classTag=%s \n", i, det.BBox.Min.X, det.BBox.Max.X, det.BBox.Min.Y, det.BBox.Max.Y, det.Score, det.Class, det.Describe)
+	}
 	calc, err2 := utils.AutoCalc(detections)
 	if err2 != nil {
 		fmt.Println(err2)

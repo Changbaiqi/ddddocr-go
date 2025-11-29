@@ -21,6 +21,7 @@ import (
 //go:embed assets/onnxruntime_win_x86_1.20.1.dll
 //go:embed assets/common_old.onnx
 //go:embed assets/common_tencent.onnx
+//go:embed assets/calc_det.onnx
 var assets embed.FS
 
 // 数据列表
@@ -28,6 +29,7 @@ var assetsList = []string{
 	getSharedLibPath(), //放这别移动位置
 	"common_old.onnx",
 	"common_tencent.onnx",
+	"calc_det.onnx",
 }
 
 func DDDDOcrCoreInit() {
