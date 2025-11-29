@@ -16,7 +16,7 @@ func TestCalcDet(t *testing.T) {
 		t.Error(err2)
 	}
 
-	img, err := utils.ReadImg("E:\\Yatori-Dev\\yatori-go-core\\examples\\qsxt_code\\qsxt_code_16.png")
+	img, err := utils.ReadImg("E:\\Yatori-Dev\\yatori-go-core\\examples\\qsxt_code\\qsxt_code_17.png")
 
 	if err != nil {
 		panic(err)
