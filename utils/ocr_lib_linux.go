@@ -23,7 +23,7 @@ func init() {
 		if runtime.GOOS == "android" {
 			sharedLibName = "onnxruntime_android_arm64.so"
 		} else {
-			//sharedLibName = "onnxruntime_linux_aarch64.so.1.22.0"
+			sharedLibName = "onnxruntime_linux_aarch64.so.1.22.0"
 		}
 	}
 }
