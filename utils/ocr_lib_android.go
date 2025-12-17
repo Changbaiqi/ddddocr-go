@@ -11,6 +11,6 @@ var assets embed.FS
 func init() {
 	switch runtime.GOARCH {
 	case "arm64":
-		sharedLibName = "onnxruntime_android_arm64.so0"
+		sharedLibName = "onnxruntime_android_arm64.so"
 	}
 }
