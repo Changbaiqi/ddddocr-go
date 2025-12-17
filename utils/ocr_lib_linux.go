@@ -4,7 +4,6 @@ package utils
 
 import (
 	"embed"
-	"fmt"
 	"runtime"
 )
 
@@ -21,8 +20,10 @@ func init() {
 	case "amd64":
 		sharedLibName = "onnxruntime_linux_x64.so.1.22.0"
 	case "arm64":
-		fmt.Printf("触发GOOS:%v  GOARCH\n\n\n", runtime.GOOS, runtime.GOARCH)
-		//sharedLibName = "onnxruntime_linux_aarch64.so.1.22.0"
-		sharedLibName = "onnxruntime_android_arm64.so"
+		if runtime.GOOS == "android" {
+			sharedLibName = "onnxruntime_android_arm64.so"
+		} else {
+			//sharedLibName = "onnxruntime_linux_aarch64.so.1.22.0"
+		}
 	}
 }
