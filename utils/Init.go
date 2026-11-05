@@ -9,6 +9,7 @@ import (
 // 由各个平台文件定义
 var sharedLibName string
 var modelFiles = []string{
+	"common.onnx",
 	"common_old.onnx",
 	"common_tencent.onnx",
 	"calc_det.onnx",

@@ -9,6 +9,7 @@ import (
 
 //go:embed assets/onnxruntime_linux_x64.so.1.22.0
 //go:embed assets/onnxruntime_linux_aarch64.so.1.22.0
+//go:embed assets/common.onnx
 //go:embed assets/common_old.onnx
 //go:embed assets/common_tencent.onnx
 //go:embed assets/calc_det.onnx
