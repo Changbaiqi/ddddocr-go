@@ -4,8 +4,6 @@ import (
 	"errors"
 	"image"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 
 	ort "github.com/yalue/onnxruntime_go"
@@ -23,6 +21,9 @@ func BetaOCRVerification(img image.Image) (string, error) {
 	if _, err := os.Stat(betaModelPath); err != nil {
 		return "", err
 	}
+	if img == nil || img.Bounds().Dy() <= 0 {
+		return "", errors.New("验证码图片高度异常")
+	}
 	height := 64
 	width := height * img.Bounds().Dx() / img.Bounds().Dy()
 	if width <= 0 {
@@ -38,51 +39,21 @@ func BetaOCRVerification(img image.Image) (string, error) {
 	}
 	defer input.Destroy()
 
-	seqLen := int64(width / 8)
-	if seqLen < 1 {
-		seqLen = 1
-	}
-	var output *ort.Tensor[float32]
-	for attempt := 0; attempt < 4; attempt++ {
-		output, err = ort.NewEmptyTensor[float32](ort.NewShape(seqLen, 1, betaClasses))
-		if err != nil {
-			return "", err
-		}
-		session, sessionErr := ort.NewAdvancedSession(
-			betaModelPath,
-			[]string{"input1"},
-			[]string{"387"},
-			[]ort.Value{input},
-			[]ort.Value{output},
-			nil,
-		)
-		if sessionErr != nil {
-			output.Destroy()
-			return "", sessionErr
-		}
-		runErr := session.Run()
-		session.Destroy()
-		if runErr == nil {
-			break
-		}
-		output.Destroy()
-		output = nil
-		if expected, ok := parseBetaSeqLen(runErr); ok {
-			seqLen = expected
-			continue
-		}
-		return "", runErr
-	}
-	if output == nil {
-		return "", errors.New("新版验证码模型未返回结果")
+	output, err := runCaptchaModel[float32](betaModelPath, "387", input)
+	if err != nil {
+		return "", err
 	}
 	defer output.Destroy()
 
 	data := output.GetData()
+	shape := output.GetShape()
+	if len(shape) != 3 || shape[0] <= 0 || shape[1] != 1 || shape[2] != betaClasses || len(data) == 0 || len(data)%betaClasses != 0 {
+		return "", errors.New("新版验证码模型返回了异常的分类维度")
+	}
+
 	var builder strings.Builder
 	previous := -1
-	for step := 0; step < int(seqLen); step++ {
-		base := step * betaClasses
+	for base := 0; base < len(data); base += betaClasses {
 		best := 0
 		bestScore := data[base]
 		for class := 1; class < betaClasses; class++ {
@@ -99,17 +70,26 @@ func BetaOCRVerification(img image.Image) (string, error) {
 	return builder.String(), nil
 }
 
-func parseBetaSeqLen(err error) (int64, bool) {
-	if err == nil {
-		return 0, false
+// 由 ONNX Runtime 按模型的实际输出尺寸分配张量，调用方负责释放。
+func runCaptchaModel[T ort.TensorData](modelPath, outputName string, input ort.Value) (*ort.Tensor[T], error) {
+	session, err := ort.NewDynamicAdvancedSession(modelPath, []string{"input1"}, []string{outputName}, nil)
+	if err != nil {
+		return nil, err
 	}
-	matches := regexp.MustCompile(`\{(\d+)(?:,\s*1)?,\s*8210\}`).FindStringSubmatch(err.Error())
-	if len(matches) != 2 {
-		return 0, false
+	defer session.Destroy()
+
+	outputs := []ort.Value{nil}
+	if err := session.Run([]ort.Value{input}, outputs); err != nil {
+		if outputs[0] != nil {
+			outputs[0].Destroy()
+		}
+		return nil, err
 	}
-	value, parseErr := strconv.ParseInt(matches[1], 10, 64)
-	if parseErr != nil || value <= 0 {
-		return 0, false
+	if tensor, ok := outputs[0].(*ort.Tensor[T]); ok {
+		return tensor, nil
 	}
-	return value, true
+	if outputs[0] != nil {
+		outputs[0].Destroy()
+	}
+	return nil, errors.New("验证码模型返回了异常的输出类型")
 }
