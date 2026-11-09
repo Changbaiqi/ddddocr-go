@@ -21,9 +21,6 @@ func BetaOCRVerification(img image.Image) (string, error) {
 	if _, err := os.Stat(betaModelPath); err != nil {
 		return "", err
 	}
-	if img == nil || img.Bounds().Dy() <= 0 {
-		return "", errors.New("验证码图片高度异常")
-	}
 	height := 64
 	width := height * img.Bounds().Dx() / img.Bounds().Dy()
 	if width <= 0 {
@@ -47,7 +44,7 @@ func BetaOCRVerification(img image.Image) (string, error) {
 
 	data := output.GetData()
 	shape := output.GetShape()
-	if len(shape) != 3 || shape[0] <= 0 || shape[1] != 1 || shape[2] != betaClasses || len(data) == 0 || len(data)%betaClasses != 0 {
+	if len(shape) == 0 || shape[len(shape)-1] != betaClasses || len(data) == 0 || len(data)%betaClasses != 0 {
 		return "", errors.New("新版验证码模型返回了异常的分类维度")
 	}
 
@@ -70,7 +67,7 @@ func BetaOCRVerification(img image.Image) (string, error) {
 	return builder.String(), nil
 }
 
-// 由 ONNX Runtime 按模型的实际输出尺寸分配张量，调用方负责释放。
+// Allocate the output in ONNX Runtime so variable-width images use the model's actual output shape.
 func runCaptchaModel[T ort.TensorData](modelPath, outputName string, input ort.Value) (*ort.Tensor[T], error) {
 	session, err := ort.NewDynamicAdvancedSession(modelPath, []string{"input1"}, []string{outputName}, nil)
 	if err != nil {
@@ -80,9 +77,6 @@ func runCaptchaModel[T ort.TensorData](modelPath, outputName string, input ort.V
 
 	outputs := []ort.Value{nil}
 	if err := session.Run([]ort.Value{input}, outputs); err != nil {
-		if outputs[0] != nil {
-			outputs[0].Destroy()
-		}
 		return nil, err
 	}
 	if tensor, ok := outputs[0].(*ort.Tensor[T]); ok {

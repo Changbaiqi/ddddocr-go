@@ -10,6 +10,7 @@ import (
 	"github.com/thedevsaddam/gojsonq"
 	ort "github.com/yalue/onnxruntime_go"
 )
+import "fmt"
 
 // 半自动验证码识别（要自己传入outputShape值）
 func SemiOCRVerification(img image.Image, outputShape ort.Shape) string {
@@ -38,7 +39,7 @@ func SemiOCRVerification(img image.Image, outputShape ort.Shape) string {
 
 	err = session.Run()
 	if err != nil {
-		return ""
+		fmt.Errorf(err.Error())
 	}
 
 	outputData := outputTensor.GetData()
@@ -53,9 +54,6 @@ func SemiOCRVerification(img image.Image, outputShape ort.Shape) string {
 
 // 全自动
 func AutoOCRVerification(img image.Image) string {
-	if img == nil {
-		return ""
-	}
 	height := img.Bounds().Dy()
 	if height <= 0 {
 		return ""
@@ -77,10 +75,6 @@ func AutoOCRVerification(img image.Image) string {
 		return ""
 	}
 	defer output.Destroy()
-	shape := output.GetShape()
-	if len(shape) != 2 || shape[0] != 1 || shape[1] <= 0 {
-		return ""
-	}
 
 	var code strings.Builder
 	for _, id := range output.GetData() {
