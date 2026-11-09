@@ -4,8 +4,6 @@ import (
 	"errors"
 	"image"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
 
 	ort "github.com/yalue/onnxruntime_go"
@@ -38,51 +36,21 @@ func BetaOCRVerification(img image.Image) (string, error) {
 	}
 	defer input.Destroy()
 
-	seqLen := int64(width / 8)
-	if seqLen < 1 {
-		seqLen = 1
-	}
-	var output *ort.Tensor[float32]
-	for attempt := 0; attempt < 4; attempt++ {
-		output, err = ort.NewEmptyTensor[float32](ort.NewShape(seqLen, 1, betaClasses))
-		if err != nil {
-			return "", err
-		}
-		session, sessionErr := ort.NewAdvancedSession(
-			betaModelPath,
-			[]string{"input1"},
-			[]string{"387"},
-			[]ort.Value{input},
-			[]ort.Value{output},
-			nil,
-		)
-		if sessionErr != nil {
-			output.Destroy()
-			return "", sessionErr
-		}
-		runErr := session.Run()
-		session.Destroy()
-		if runErr == nil {
-			break
-		}
-		output.Destroy()
-		output = nil
-		if expected, ok := parseBetaSeqLen(runErr); ok {
-			seqLen = expected
-			continue
-		}
-		return "", runErr
-	}
-	if output == nil {
-		return "", errors.New("新版验证码模型未返回结果")
+	output, err := runCaptchaModel[float32](betaModelPath, "387", input)
+	if err != nil {
+		return "", err
 	}
 	defer output.Destroy()
 
 	data := output.GetData()
+	shape := output.GetShape()
+	if len(shape) == 0 || shape[len(shape)-1] != betaClasses || len(data) == 0 || len(data)%betaClasses != 0 {
+		return "", errors.New("新版验证码模型返回了异常的分类维度")
+	}
+
 	var builder strings.Builder
 	previous := -1
-	for step := 0; step < int(seqLen); step++ {
-		base := step * betaClasses
+	for base := 0; base < len(data); base += betaClasses {
 		best := 0
 		bestScore := data[base]
 		for class := 1; class < betaClasses; class++ {
@@ -99,17 +67,23 @@ func BetaOCRVerification(img image.Image) (string, error) {
 	return builder.String(), nil
 }
 
-func parseBetaSeqLen(err error) (int64, bool) {
-	if err == nil {
-		return 0, false
+// Allocate the output in ONNX Runtime so variable-width images use the model's actual output shape.
+func runCaptchaModel[T ort.TensorData](modelPath, outputName string, input ort.Value) (*ort.Tensor[T], error) {
+	session, err := ort.NewDynamicAdvancedSession(modelPath, []string{"input1"}, []string{outputName}, nil)
+	if err != nil {
+		return nil, err
 	}
-	matches := regexp.MustCompile(`\{(\d+)(?:,\s*1)?,\s*8210\}`).FindStringSubmatch(err.Error())
-	if len(matches) != 2 {
-		return 0, false
+	defer session.Destroy()
+
+	outputs := []ort.Value{nil}
+	if err := session.Run([]ort.Value{input}, outputs); err != nil {
+		return nil, err
 	}
-	value, parseErr := strconv.ParseInt(matches[1], 10, 64)
-	if parseErr != nil || value <= 0 {
-		return 0, false
+	if tensor, ok := outputs[0].(*ort.Tensor[T]); ok {
+		return tensor, nil
 	}
-	return value, true
+	if outputs[0] != nil {
+		outputs[0].Destroy()
+	}
+	return nil, errors.New("验证码模型返回了异常的输出类型")
 }
